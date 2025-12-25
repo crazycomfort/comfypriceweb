@@ -47,7 +47,7 @@ export default function EstimatesPage() {
           // Remove duplicates based on estimateId
           const uniqueEstimates = Array.from(
             new Map(data.estimates.map((est: Estimate) => [est.estimateId, est])).values()
-          );
+          ) as Estimate[];
           setEstimates(uniqueEstimates);
         }
         setLoading(false);
