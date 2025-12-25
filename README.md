@@ -1,5 +1,7 @@
 # ComfyPrice - HVAC Ballpark Estimator
 
+Updated for deployment.
+
 A Next.js application for providing transparent, detailed HVAC estimates for homeowners and contractors.
 
 ## Tech Stack
@@ -48,3 +50,4 @@ npm run lint
 ✅ **Phase One**: Product Definition Complete
 🔄 **Phase Two**: Technical Architecture & Design (In Progress)
 
+# Updated
