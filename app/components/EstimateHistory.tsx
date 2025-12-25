@@ -42,7 +42,7 @@ export default function EstimateHistory({ limit = 5, showViewAll = true }: Estim
           // Remove duplicates based on estimateId
           const uniqueEstimates = Array.from(
             new Map(data.estimates.map((est: Estimate) => [est.estimateId, est])).values()
-          );
+          ) as Estimate[];
           setEstimates(uniqueEstimates.slice(0, limit));
         }
         setLoading(false);
