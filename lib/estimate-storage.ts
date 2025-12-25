@@ -23,11 +23,23 @@ async function ensureDataDir() {
 }
 
 async function readEstimates(): Promise<StoredEstimate[]> {
-  await ensureDataDir();
   try {
-    const data = await fs.readFile(ESTIMATES_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
+    await ensureDataDir();
+    try {
+      const data = await fs.readFile(ESTIMATES_FILE, "utf-8");
+      if (!data || !data.trim()) {
+        return [];
+      }
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (readError) {
+      // File doesn't exist or is invalid - return empty array
+      console.error("Error reading estimates file:", readError);
+      return [];
+    }
+  } catch (error) {
+    // Directory creation failed or other error - return empty array
+    console.error("Error in readEstimates:", error);
     return [];
   }
 }
@@ -62,8 +74,13 @@ export async function saveEstimate(estimate: EstimateResult, options: {
 }
 
 export async function getEstimateById(estimateId: string): Promise<StoredEstimate | null> {
-  const estimates = await readEstimates();
-  return estimates.find((e) => e.estimateId === estimateId) || null;
+  try {
+    const estimates = await readEstimates();
+    return estimates.find((e) => e.estimateId === estimateId) || null;
+  } catch (error) {
+    console.error("Error in getEstimateById:", error);
+    return null;
+  }
 }
 
 export async function getEstimatesByCompany(companyId: string): Promise<StoredEstimate[]> {

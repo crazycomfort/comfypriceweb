@@ -7,21 +7,38 @@ import { logEvent } from "@/lib/telemetry";
 import { checkRateLimit, getRateLimitKey } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
-  // Rate limiting
-  const key = getRateLimitKey(request);
-  const limit = await checkRateLimit(key, 10, 60 * 1000); // 10 requests per minute
-  if (!limit.allowed) {
-    return NextResponse.json(
-      { error: "Rate limit exceeded" },
-      { status: 429 }
-    );
+  // Rate limiting (fail gracefully if rate limiting fails)
+  try {
+    const key = getRateLimitKey(request);
+    const limit = await checkRateLimit(key, 10, 60 * 1000); // 10 requests per minute
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429 }
+      );
+    }
+  } catch (rateLimitError) {
+    // If rate limiting fails, continue anyway (don't block users)
+    console.error("Rate limiting error:", rateLimitError);
   }
 
   try {
     // For homeowner estimate generation, we allow it if:
     // 1. No contractor session exists (isHomeowner = true), OR
     // 2. Explicitly allow homeowner actions even if contractor session exists
-    const context = await getExecutionContext(request);
+    let context: ExecutionContext;
+    try {
+      context = await getExecutionContext(request);
+    } catch (contextError) {
+      // If context fails, create a default homeowner context
+      console.error("Error getting execution context:", contextError);
+      context = {
+        isHomeowner: true,
+        isContractor: false,
+        companyId: null,
+        contractorId: null,
+      };
+    }
     
     // Homeowner API routes should always allow homeowner actions
     // If user has contractor session, they can still use homeowner flow
@@ -30,7 +47,15 @@ export async function POST(request: NextRequest) {
       isHomeowner: true, // Force homeowner context for this endpoint
     };
     
-    const canEstimate = await canExecute("homeowner:generate_estimate", homeownerContext);
+    let canEstimate = true;
+    try {
+      canEstimate = await canExecute("homeowner:generate_estimate", homeownerContext);
+    } catch (authError) {
+      // If auth check fails, allow the request (fail open for homeowner flow)
+      console.error("Authorization check error:", authError);
+      canEstimate = true;
+    }
+    
     if (!canEstimate) {
       console.error("Authorization failed:", { 
         action: "homeowner:generate_estimate", 

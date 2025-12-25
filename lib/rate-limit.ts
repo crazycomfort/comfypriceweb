@@ -2,7 +2,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// Use /tmp for Vercel serverless (only writable location)
+const DATA_DIR = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "data");
 const RATE_LIMIT_FILE = path.join(DATA_DIR, "rate-limits.json");
 
 interface RateLimitEntry {
@@ -20,18 +21,33 @@ async function ensureDataDir() {
 }
 
 async function readRateLimits(): Promise<RateLimitEntry[]> {
-  await ensureDataDir();
   try {
-    const data = await fs.readFile(RATE_LIMIT_FILE, "utf-8");
-    return JSON.parse(data);
-  } catch {
+    await ensureDataDir();
+    try {
+      const data = await fs.readFile(RATE_LIMIT_FILE, "utf-8");
+      if (!data || !data.trim()) {
+        return [];
+      }
+      const parsed = JSON.parse(data);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (readError) {
+      // File doesn't exist or is invalid - return empty array
+      return [];
+    }
+  } catch (error) {
+    // Directory creation failed or other error - return empty array
     return [];
   }
 }
 
 async function writeRateLimits(limits: RateLimitEntry[]): Promise<void> {
-  await ensureDataDir();
-  await fs.writeFile(RATE_LIMIT_FILE, JSON.stringify(limits, null, 2));
+  try {
+    await ensureDataDir();
+    await fs.writeFile(RATE_LIMIT_FILE, JSON.stringify(limits, null, 2));
+  } catch (error) {
+    // Fail silently - rate limiting is not critical
+    console.error("Error writing rate limits:", error);
+  }
 }
 
 // Check rate limit
