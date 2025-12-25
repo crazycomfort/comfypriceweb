@@ -65,33 +65,63 @@ function HomeownerH6Content() {
   const estimateSharingEnabled = isFeatureEnabled("estimateSharing");
 
   useEffect(() => {
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        setError("Request timed out. Please try again.");
+        setLoading(false);
+      }
+    }, 10000); // 10 second timeout
+    
     const estimateId = searchParams.get("estimateId");
     
     if (estimateId) {
       fetch(`/api/homeowner/estimate/${estimateId}`)
-        .then((res) => {
-          if (!res.ok) {
-            throw new Error(res.status === 404 ? "Estimate not found" : "Failed to load estimate");
+        .then(async (res) => {
+          // Read response body once (can only be read once)
+          const text = await res.text();
+          
+          if (!text) {
+            throw new Error(res.status === 404 
+              ? "Estimate not found" 
+              : `Server error: ${res.status} ${res.statusText}`);
           }
-          return res.json();
+          
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            throw new Error("Server error: Invalid JSON response. Please try again.");
+          }
+          
+          if (!res.ok) {
+            throw new Error(data.error || `Server error: ${res.status} ${res.statusText}`);
+          }
+          
+          return data;
         })
         .then((data) => {
-          if (data.estimate) {
+          if (data && data.estimate) {
             setEstimate(data.estimate);
           } else {
-            setError("Estimate not found");
+            setError(data?.error || "Estimate not found");
           }
           setLoading(false);
         })
         .catch((err) => {
-          setError(err.message || "Failed to load estimate");
+          console.error("Estimate loading error:", err);
+          setError(err.message || "Failed to load estimate. Please try again.");
           setLoading(false);
+        })
+        .finally(() => {
+          clearTimeout(timeoutId);
         });
     } else {
       const formData = sessionStorage.getItem("homeownerEstimateInput");
       if (!formData) {
         setError("No estimate data found. Please start over.");
         setLoading(false);
+        clearTimeout(timeoutId);
         return;
       }
 
@@ -101,6 +131,7 @@ function HomeownerH6Content() {
       } catch {
         setError("Invalid form data. Please start over.");
         setLoading(false);
+        clearTimeout(timeoutId);
         return;
       }
 
@@ -109,21 +140,36 @@ function HomeownerH6Content() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(inputData),
       })
-        .then((res) => {
-          if (!res.ok) {
-            return res.json().then(data => {
-              throw new Error(data.error || "Failed to generate estimate");
-            });
+        .then(async (res) => {
+          // Read response body once (can only be read once)
+          const text = await res.text();
+          
+          if (!text) {
+            throw new Error(res.ok 
+              ? "Server error: Empty response. Please try again." 
+              : `Server error: ${res.status} ${res.statusText}`);
           }
-          return res.json();
+          
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            throw new Error("Server error: Invalid JSON response. Please try again.");
+          }
+          
+          if (!res.ok) {
+            throw new Error(data.error || `Server error: ${res.status} ${res.statusText}`);
+          }
+          
+          return data;
         })
             .then(async (data) => {
-              if (data.estimate) {
+              if (data && data.estimate) {
                 setEstimate(data.estimate);
                 sessionStorage.setItem("homeownerEstimateId", data.estimate.estimateId);
                 sessionStorage.removeItem("homeownerEstimateInput");
                 
-                // Track estimate generation
+                // Track estimate generation (fail silently if it fails)
                 try {
                   await fetch("/api/analytics/track", {
                     method: "POST",
@@ -134,17 +180,25 @@ function HomeownerH6Content() {
                     }),
                   });
                 } catch (error) {
-                  // Fail silently
+                  // Fail silently - analytics is not critical
                 }
               } else {
-                setError("Failed to generate estimate");
+                setError(data?.error || "Failed to generate estimate: Invalid response");
               }
               setLoading(false);
             })
         .catch((err) => {
-          setError(err.message || "Failed to generate estimate");
+          console.error("Estimate generation error:", err);
+          setError(err.message || "Failed to generate estimate. Please try again.");
           setLoading(false);
+        })
+        .finally(() => {
+          clearTimeout(timeoutId);
         });
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
     }
   }, [searchParams]);
 
@@ -284,7 +338,17 @@ function HomeownerH6Content() {
         }),
       });
 
-      const data = await response.json();
+      // Check if response has content before parsing
+      const text = await response.text();
+      if (!text) {
+        throw new Error("Server error: Empty response. Please try again.");
+      }
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error("Server error: Invalid response. Please try again.");
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send email");
@@ -481,7 +545,19 @@ function HomeownerH6Content() {
                               isHomeowner: true,
                             }),
                           });
-                          const data = await res.json();
+                          // Check if response has content before parsing
+                          const text = await res.text();
+                          if (!text) {
+                            alert("Server error: Empty response. Please try again.");
+                            return;
+                          }
+                          let data;
+                          try {
+                            data = JSON.parse(text);
+                          } catch (parseError) {
+                            alert("Server error: Invalid response. Please try again.");
+                            return;
+                          }
                           if (data.token) {
                             setShareToken(data.token);
                             const shareUrl = `${window.location.origin}/estimate/${data.token}`;
@@ -937,6 +1013,59 @@ function HomeownerH6Content() {
                     }),
                   });
                   
+                  // Check response before processing
+                  const text = await response.text();
+                  if (!text) {
+                    if (!response.ok) {
+                      alert("Server error: Empty response. Please try again.");
+                    } else {
+                      // Empty but OK response - treat as success
+                      trackEvent("contact_form_submitted", { tier: selectedTier });
+                      alert("Thank you! We'll contact you soon.");
+                      setShowContactForm(false);
+                      setContactData({
+                        name: "",
+                        phone: "",
+                        email: "",
+                        preferredContact: "email",
+                        timeline: "",
+                        financing: false,
+                        upgrades: [],
+                        notes: "",
+                        consentToContact: false,
+                      });
+                    }
+                    setSubmittingContact(false);
+                    return;
+                  }
+                  
+                  let data;
+                  try {
+                    data = JSON.parse(text);
+                  } catch (parseError) {
+                    if (response.ok) {
+                      // Parse failed but response was OK - treat as success
+                      trackEvent("contact_form_submitted", { tier: selectedTier });
+                      alert("Thank you! We'll contact you soon.");
+                      setShowContactForm(false);
+                      setContactData({
+                        name: "",
+                        phone: "",
+                        email: "",
+                        preferredContact: "email",
+                        timeline: "",
+                        financing: false,
+                        upgrades: [],
+                        notes: "",
+                        consentToContact: false,
+                      });
+                    } else {
+                      alert("Server error: Invalid response. Please try again.");
+                    }
+                    setSubmittingContact(false);
+                    return;
+                  }
+                  
                   if (response.ok) {
                     trackEvent("contact_form_submitted", { tier: selectedTier });
                     alert("Thank you! We'll contact you soon.");
@@ -953,7 +1082,7 @@ function HomeownerH6Content() {
                       consentToContact: false,
                     });
                   } else {
-                    alert("Failed to submit. Please try again.");
+                    alert(data.error || "Failed to submit. Please try again.");
                   }
                 } catch (error) {
                   alert("An error occurred. Please try again.");

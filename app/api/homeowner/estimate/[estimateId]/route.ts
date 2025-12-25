@@ -30,8 +30,13 @@ export async function GET(
       estimate,
     });
   } catch (error) {
+    console.error("Error fetching estimate:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch estimate" },
+      { 
+        error: "Failed to fetch estimate",
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }

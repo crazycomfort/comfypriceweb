@@ -72,15 +72,31 @@ export async function POST(request: NextRequest) {
     const estimate = generateEstimate(input);
 
     // Save estimate (homeowner, no company)
-    const stored = await saveEstimate(estimate, {
-      isHomeowner: true,
-    });
+    // Note: In Vercel, file storage may not persist, but that's okay for estimates
+    let stored;
+    try {
+      stored = await saveEstimate(estimate, {
+        isHomeowner: true,
+      });
+    } catch (storageError) {
+      console.error("Failed to save estimate to storage:", storageError);
+      // Continue anyway - estimate is still valid, just not persisted
+      stored = {
+        ...estimate,
+        isHomeowner: true,
+      };
+    }
 
-    await logEvent("estimate_generated", {
-      estimateId: stored.estimateId,
-      version: stored.version,
-      isHomeowner: true,
-    });
+    try {
+      await logEvent("estimate_generated", {
+        estimateId: stored.estimateId,
+        version: stored.version,
+        isHomeowner: true,
+      });
+    } catch (logError) {
+      // Fail silently if logging fails
+      console.error("Failed to log event:", logError);
+    }
 
     return NextResponse.json({
       success: true,
@@ -88,9 +104,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Estimate generation error:", error);
-    await logEvent("estimate_generation_error", { error: "unknown" });
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    try {
+      await logEvent("estimate_generation_error", { error: errorMessage });
+    } catch (logError) {
+      // Fail silently if logging fails
+      console.error("Failed to log error:", logError);
+    }
     return NextResponse.json(
-      { error: "Failed to generate estimate" },
+      { 
+        error: "Failed to generate estimate",
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }
