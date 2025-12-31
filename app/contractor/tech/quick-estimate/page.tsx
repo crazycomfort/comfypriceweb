@@ -30,3 +30,4 @@ export default async function TechQuickEstimate() {
   redirect("/contractor/c1");
 }
 
+

@@ -4,7 +4,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// Use /tmp for Vercel serverless (only writable location)
+const DATA_DIR = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "data");
 const TELEMETRY_FILE = path.join(DATA_DIR, "telemetry.json");
 
 export interface TelemetryEvent {

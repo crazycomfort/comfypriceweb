@@ -53,9 +53,19 @@ export async function GET(
       );
     }
 
+    // Fetch custom pricing if it exists
+    const { getCustomPricing } = await import("@/lib/custom-pricing-store");
+    const customPricingData = getCustomPricing(estimateId);
+    
+    const estimateWithCustomPricing = {
+      ...estimate,
+      customPricing: customPricingData?.customPricing || null,
+      pricingVarianceNotes: customPricingData?.pricingVarianceNotes || null,
+    };
+
     return NextResponse.json({
       success: true,
-      estimate,
+      estimate: estimateWithCustomPricing,
     });
   } catch (error) {
     console.error("Error fetching estimate:", error);

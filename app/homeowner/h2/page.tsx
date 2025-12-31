@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ProgressIndicator from "@/app/components/ProgressIndicator";
-import HelpTooltip from "@/app/components/HelpTooltip";
 import ErrorMessage from "@/app/components/ErrorMessage";
+import { SecondarySection, SecondaryHeader, PrimaryCTA, SecondaryCTA } from "@/app/components/SectionHierarchy";
 
 const STEPS = [
   "Location",
@@ -27,12 +27,31 @@ export default function HomeownerH2() {
   useEffect(() => {
     const saved = sessionStorage.getItem("homeownerEstimateInput");
     if (saved) {
-      const parsed = JSON.parse(saved);
-      setFormData({
-        sqft: parsed.squareFootage || "",
-        floors: parsed.floors || "",
-        age: parsed.homeAge || "",
-      });
+      try {
+        const parsed = JSON.parse(saved);
+        
+        // Map squareFootage number back to range string
+        let sqftValue = "";
+        if (parsed.squareFootage) {
+          const sqft = parsed.squareFootage;
+          if (sqft <= 1000) sqftValue = "500-1000";
+          else if (sqft <= 1500) sqftValue = "1001-1500";
+          else if (sqft <= 2000) sqftValue = "1501-2000";
+          else if (sqft <= 2500) sqftValue = "2001-2500";
+          else if (sqft <= 3000) sqftValue = "2501-3000";
+          else if (sqft <= 4000) sqftValue = "3001-4000";
+          else if (sqft <= 5000) sqftValue = "4001-5000";
+          else sqftValue = "5000+";
+        }
+        
+        setFormData({
+          sqft: sqftValue,
+          floors: parsed.floors ? String(parsed.floors) : "",
+          age: parsed.homeAge || "",
+        });
+      } catch (error) {
+        console.error("Error parsing saved form data:", error);
+      }
     }
   }, []);
 
@@ -103,28 +122,33 @@ export default function HomeownerH2() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <main id="main-content" className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <SecondarySection>
         {/* Progress Indicator */}
-        <ProgressIndicator currentStep={2} totalSteps={5} stepLabels={STEPS} />
+        <div className="mb-8">
+          <ProgressIndicator currentStep={2} totalSteps={5} stepLabels={STEPS} />
+        </div>
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Step 2: Home Basics
-          </h1>
-          <p className="text-lg text-gray-600">
-            Help us understand your home's size and characteristics
-          </p>
-        </div>
+        <SecondaryHeader
+          title="Step 2: Home Characteristics"
+          subtitle="These details anchor your estimate to realistic system size and installation complexity."
+          align="center"
+          className="mb-12"
+        />
 
         {/* Form Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8 space-y-6">
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-4">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
               Square Footage <span className="text-red-500">*</span>
-              <HelpTooltip content="Select the total square footage of your home, including all floors. This helps us calculate the appropriate system size and capacity needed for your space." />
             </label>
+            
+            {/* Insight Block */}
+            <p className="text-sm text-gray-600 mb-4">
+              Homes in this size range typically require systems designed for consistent airflow and proper load balancing.
+            </p>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { value: "500-1000", label: "500-1,000 sq ft" },
@@ -140,10 +164,10 @@ export default function HomeownerH2() {
                 return (
                   <label
                     key={option.value}
-                    className={`flex items-center justify-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    className={`flex items-center justify-center p-3 border rounded-lg cursor-pointer transition-all ${
                       isSelected
-                        ? "border-primary-600 bg-primary-50 text-primary-700 shadow-md"
-                        : "border-gray-200 hover:border-gray-300 bg-white"
+                        ? "border-primary-600 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-gray-300 bg-white text-gray-700"
                     }`}
                   >
                     <input
@@ -164,16 +188,45 @@ export default function HomeownerH2() {
                 <ErrorMessage message={errors.sqft} type="error" />
               </div>
             )}
-            <p className="mt-2 text-sm text-gray-500">
-              Total square footage of your home (including all floors)
-            </p>
+
+            {/* Conditional Price Signal */}
+            {formData.sqft && (
+              <div className="mt-3 text-sm text-gray-600">
+                {(() => {
+                  const rangeMatch = formData.sqft.match(/(\d+)-(\d+)/);
+                  if (!rangeMatch) {
+                    if (formData.sqft === "5000+") {
+                      return "Larger homes often require higher-capacity or zoned systems, increasing cost.";
+                    }
+                    return "";
+                  }
+                  
+                  const min = parseInt(rangeMatch[1]);
+                  const max = parseInt(rangeMatch[2]);
+                  
+                  if (min >= 2000 && min < 2500) {
+                    return "Installations in this range are rarely under $7,000 when done correctly.";
+                  } else if (min >= 2500 && min < 3000) {
+                    return "Most professionally installed systems in this range fall into mid five figures.";
+                  } else if (min >= 3000) {
+                    return "Larger homes often require higher-capacity or zoned systems, increasing cost.";
+                  }
+                  return "";
+                })()}
+              </div>
+            )}
           </div>
 
           <div>
-            <label htmlFor="floors" className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+            <label htmlFor="floors" className="block text-sm font-semibold text-gray-900 mb-2">
               Number of Floors <span className="text-red-500">*</span>
-              <HelpTooltip content="The number of floors affects ductwork requirements and system sizing. Multi-story homes may need zoning or additional equipment for optimal comfort." />
             </label>
+            
+            {/* Insight Block */}
+            <p className="text-sm text-gray-600 mb-3">
+              Multi-story homes often require additional airflow control to maintain even comfort.
+            </p>
+
             <select
               id="floors"
               name="floors"
@@ -198,10 +251,15 @@ export default function HomeownerH2() {
           </div>
 
           <div>
-            <label htmlFor="age" className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+            <label htmlFor="age" className="block text-sm font-semibold text-gray-900 mb-2">
               Home Age <span className="text-red-500">*</span>
-              <HelpTooltip content="Older homes may need additional ductwork modifications, insulation upgrades, or electrical work. Newer homes typically have better insulation and may require less additional work." />
             </label>
+            
+            {/* Insight Block */}
+            <p className="text-sm text-gray-600 mb-3">
+              Older homes more frequently require infrastructure updates during HVAC replacement.
+            </p>
+
             <select
               id="age"
               name="age"
@@ -213,47 +271,57 @@ export default function HomeownerH2() {
               }`}
             >
               <option value="">Select home age...</option>
-              <option value="0-10">0-10 years</option>
-              <option value="11-20">11-20 years</option>
-              <option value="21-30">21-30 years</option>
-              <option value="31-50">31-50 years</option>
-              <option value="50+">50+ years</option>
+              <option value="0-10">Newer (0-10 years)</option>
+              <option value="11-20">Mid-age (11-20 years)</option>
+              <option value="21-30">Older (21-30 years)</option>
+              <option value="31-50">Older (31-50 years)</option>
+              <option value="50+">Older (50+ years)</option>
             </select>
             {errors.age && (
               <div className="mt-2">
                 <ErrorMessage message={errors.age} type="error" />
               </div>
             )}
-            <p className="mt-2 text-sm text-gray-500">
-              Home age affects insulation quality and system requirements
-            </p>
+
+            {/* Conditional Callout */}
+            {formData.age && (formData.age === "21-30" || formData.age === "31-50" || formData.age === "50+") && (
+              <div className="mt-3 text-sm text-gray-600">
+                Homes over 20 years old commonly need at least one supporting upgrade during installation.
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Navigation */}
-        <div className="mt-8 flex justify-between items-center">
+        {/* Validation Moment */}
+        {formData.sqft && formData.floors && formData.age && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700 font-medium flex items-center gap-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              This puts you ahead of the process. Most homeowners don't get this level of clarity.
+            </p>
+          </div>
+        )}
+
+        {/* Navigation - ONE PRIMARY CTA */}
+        <div className="mt-12 flex justify-between items-center">
           <Link
             href="/homeowner/h1"
-            className="inline-flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-900 font-medium transition-colors cursor-pointer"
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors underline-offset-4 hover:underline"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
             Back
           </Link>
           <button
             onClick={handleNext}
-            type="button"
             disabled={!formData.sqft || !formData.floors || !formData.age}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:transform-none cursor-pointer"
+            type="button"
+            className="px-8 py-4 bg-white text-primary-700 font-semibold rounded-xl hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg text-lg cursor-pointer"
           >
             Continue
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
           </button>
         </div>
-      </div>
+      </SecondarySection>
     </main>
   );
 }

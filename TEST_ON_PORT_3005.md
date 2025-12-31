@@ -69,3 +69,4 @@ Your app is running on **port 3005** (Next.js automatically uses the next availa
 
 The app should work on port 3005 just like it would on 3000. The port number doesn't matter - it's just which port Next.js chose to use.
 
+

@@ -12,7 +12,7 @@ export default async function ContractorSetupRequired() {
         <div className="bg-white p-8 rounded-lg shadow-md">
           <h1 className="text-3xl font-bold mb-4">Company Setup Required</h1>
           <p className="text-gray-600 mb-6">
-            Please complete your company setup before accessing contractor tools.
+            Please complete your company profile to build credibility and access your pricing authority tools.
           </p>
 
           <div className="mb-6">
@@ -41,7 +41,7 @@ export default async function ContractorSetupRequired() {
 
           <div className="flex gap-4">
             <Link
-              href="/contractor/company-setup"
+              href="/contractor/owner/settings"
               className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
             >
               Complete Setup

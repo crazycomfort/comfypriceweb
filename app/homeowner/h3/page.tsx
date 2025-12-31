@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ProgressIndicator from "@/app/components/ProgressIndicator";
-import HelpTooltip from "@/app/components/HelpTooltip";
 
 const STEPS = [
   "Location",
@@ -69,7 +68,7 @@ export default function HomeownerH3() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12">
+    <main id="main-content" className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Progress Indicator */}
         <ProgressIndicator currentStep={3} totalSteps={5} stepLabels={STEPS} />
@@ -79,17 +78,21 @@ export default function HomeownerH3() {
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
             Step 3: Current System
           </h1>
-          <p className="text-lg text-gray-600">
-            Tell us about your existing HVAC system (optional)
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Your current system helps determine what can be reused, what must be upgraded, and where installation costs typically change.
           </p>
         </div>
 
         {/* Form Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8 space-y-6">
+          {/* Normalization Reassurance */}
+          <p className="text-sm text-gray-600 mb-4">
+            Most homeowners aren't sure of every system detail. Estimates are refined later if needed.
+          </p>
+
           <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-3">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
               Do you have an existing HVAC system?
-              <HelpTooltip content="This information helps us understand if you're replacing an existing system or installing new. Replacement installations may have different costs depending on the condition of existing ductwork and equipment." />
             </label>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -120,12 +123,14 @@ export default function HomeownerH3() {
           </div>
 
           {formData.hasExisting === "yes" && (
-            <div className="space-y-6 pt-6 border-t border-gray-200 animate-in fade-in slide-in-from-top-2">
+            <div className="space-y-6 pt-6 border-t border-gray-200">
               <div>
-                <label htmlFor="systemType" className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
-                  System Type
-                  <HelpTooltip content="The type of system you currently have. This helps determine compatibility and whether any modifications are needed for a new system." />
+                <label htmlFor="systemType" className="block text-sm font-semibold text-gray-900 mb-2">
+                  Current System Type
                 </label>
+                <p className="text-sm text-gray-600 mb-3">
+                  System type affects installation compatibility and whether existing components can be reused.
+                </p>
                 <select
                   id="systemType"
                   name="systemType"
@@ -142,10 +147,12 @@ export default function HomeownerH3() {
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-4">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
                   System Age
-                  <HelpTooltip content="Older systems (15+ years) are typically less efficient and may need more extensive replacement work. Newer systems may only need minor modifications." />
                 </label>
+                <p className="text-sm text-gray-600 mb-3">
+                  Older systems may need efficiency upgrades or code compliance updates that affect installation scope.
+                </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {[
                     { value: "0-5", label: "0-5 years" },
@@ -181,10 +188,12 @@ export default function HomeownerH3() {
               </div>
 
               <div>
-                <label htmlFor="condition" className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
-                  Condition
-                  <HelpTooltip content="The condition of your current system affects installation complexity. Poor or non-working systems may require additional cleanup or ductwork repairs." />
+                <label htmlFor="condition" className="block text-sm font-semibold text-gray-900 mb-2">
+                  Current Condition
                 </label>
+                <p className="text-sm text-gray-600 mb-3">
+                  Condition determines whether existing ductwork and components can be reused or must be replaced.
+                </p>
                 <select
                   id="condition"
                   name="condition"
@@ -198,120 +207,35 @@ export default function HomeownerH3() {
                   <option value="not-working">Not Working</option>
                 </select>
               </div>
-
-              {/* Replacement Reason Questions */}
-              <div className="space-y-6 pt-6 border-t border-gray-200">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-4">
-                    Why are you replacing your system?
-                    <HelpTooltip content="Understanding your motivation helps us provide the best recommendations. Are you being proactive, or is there an urgent need?" />
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      { value: "proactive", label: "Proactive - System is old but still working" },
-                      { value: "broken", label: "System is broken/not working" },
-                      { value: "inefficient", label: "System is inefficient/high energy bills" },
-                      { value: "upgrade", label: "Want to upgrade for better features" },
-                      { value: "home-improvement", label: "Part of home improvement project" },
-                      { value: "other", label: "Other reason" },
-                    ].map((option) => (
-                      <label
-                        key={option.value}
-                        className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          formData.replacementReason === option.value
-                            ? "border-primary-600 bg-primary-50 text-primary-700 shadow-md"
-                            : "border-gray-200 hover:border-gray-300 bg-white"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="replacementReason"
-                          value={option.value}
-                          checked={formData.replacementReason === option.value}
-                          onChange={handleChange}
-                          className="sr-only"
-                        />
-                        <span className="font-medium text-sm leading-relaxed">{option.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-4">
-                    How do you know it's time to replace? (Select all that apply)
-                    <HelpTooltip content="This helps us understand what signs or factors led you to consider replacement. You can select multiple options." />
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[
-                      { value: "age", label: "System is 15+ years old" },
-                      { value: "repairs", label: "Frequent repairs needed" },
-                      { value: "bills", label: "High energy bills" },
-                      { value: "comfort", label: "Home not comfortable" },
-                      { value: "noise", label: "System is too noisy" },
-                      { value: "contractor", label: "Contractor recommended replacement" },
-                      { value: "research", label: "Research shows it's time" },
-                    ].map((option) => {
-                      const isSelected = Array.isArray(formData.howTheyKnow) 
-                        ? formData.howTheyKnow.includes(option.value)
-                        : formData.howTheyKnow === option.value;
-                      return (
-                        <label
-                          key={option.value}
-                          className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-primary-600 bg-primary-50 text-primary-700 shadow-md"
-                              : "border-gray-200 hover:border-gray-300 bg-white"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            value={option.value}
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const current = Array.isArray(formData.howTheyKnow) 
-                                ? formData.howTheyKnow 
-                                : formData.howTheyKnow ? [formData.howTheyKnow] : [];
-                              const newValue = e.target.checked
-                                ? [...current, option.value]
-                                : current.filter(v => v !== option.value);
-                              handleChange({
-                                target: { name: "howTheyKnow", value: newValue }
-                              } as any);
-                            }}
-                            className="sr-only"
-                          />
-                          <span className="font-medium text-sm leading-relaxed">{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </div>
+
+        {/* Expectation-Setting Helper Text */}
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600 max-w-2xl mx-auto">
+            These answers help narrow your estimate range. Final pricing is confirmed after a professional evaluation.
+          </p>
+        </div>
+
+        <p className="text-sm text-gray-500 text-center mt-4 mb-6">
+          This is educational information. You're not committing to anything.
+        </p>
 
         {/* Navigation */}
         <div className="mt-8 flex justify-between items-center">
           <Link
             href="/homeowner/h2"
-            className="inline-flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-900 font-medium transition-colors cursor-pointer"
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors underline-offset-4 hover:underline"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
             Back
           </Link>
           <button
             onClick={handleNext}
             type="button"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
+            className="px-8 py-4 bg-white text-primary-700 font-semibold rounded-xl hover:bg-primary-50 transition-all duration-200 shadow-lg text-lg cursor-pointer"
           >
             Continue
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
           </button>
         </div>
       </div>

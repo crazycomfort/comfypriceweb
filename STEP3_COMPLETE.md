@@ -176,3 +176,4 @@ Currently, all roles (Owner Admin, Office, Tech) have the same page access:
 
 All authentication, session handling, and company setup persistence implemented. Gates are wired to real data. Pricing remains stubbed as required.
 
+

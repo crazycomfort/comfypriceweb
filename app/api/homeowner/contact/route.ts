@@ -34,26 +34,53 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || !phone || !email) {
+    if (!name) {
       return NextResponse.json(
-        { error: "Name, phone, and email are required" },
+        { error: "Name is required" },
         { status: 400 }
       );
     }
 
-    // Validate consent
-    if (!consentToContact) {
+    // For minimal appointment requests, email OR phone is required (not both)
+    // For full contact forms, both may be required
+    if (!email && !phone) {
+      return NextResponse.json(
+        { error: "Please provide either an email address or phone number" },
+        { status: 400 }
+      );
+    }
+
+    // If preferredContact is specified, validate that method is provided
+    if (preferredContact === "email" && !email) {
+      return NextResponse.json(
+        { error: "Email address is required for email contact" },
+        { status: 400 }
+      );
+    }
+
+    if (preferredContact === "phone" && !phone) {
+      return NextResponse.json(
+        { error: "Phone number is required for phone contact" },
+        { status: 400 }
+      );
+    }
+
+    // Basic email validation (only if email is provided)
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return NextResponse.json(
+          { error: "Please enter a valid email address" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Consent is only required for full contact forms, not minimal appointment requests
+    // If consentToContact is provided, validate it; otherwise assume consent is implied by form submission
+    if (consentToContact !== undefined && !consentToContact) {
       return NextResponse.json(
         { error: "Consent to contact is required" },
-        { status: 400 }
-      );
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "Please enter a valid email address" },
         { status: 400 }
       );
     }

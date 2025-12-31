@@ -67,3 +67,4 @@ If you see port 3001, check:
 - Check terminal output when running `npm run dev` - it will show the actual port
 - Next.js will automatically use 3001 if 3000 is taken
 
+

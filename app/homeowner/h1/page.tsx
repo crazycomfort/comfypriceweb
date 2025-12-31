@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ProgressIndicator from "@/app/components/ProgressIndicator";
-import HelpTooltip from "@/app/components/HelpTooltip";
 import ErrorMessage from "@/app/components/ErrorMessage";
 import LiveRegion from "@/app/components/LiveRegion";
+import { SecondarySection, SecondaryHeader, PrimaryCTA, SecondaryCTA } from "@/app/components/SectionHierarchy";
 
 const STEPS = [
   "Location",
@@ -47,8 +47,8 @@ export default function HomeownerH1() {
   const handleZipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatZipCode(e.target.value);
     setZipCode(formatted);
+    // Clear any error state when user manually enters ZIP
     setError("");
-    setIsValid(false);
     
     // Real-time validation
     if (formatted.length >= 5) {
@@ -68,12 +68,14 @@ export default function HomeownerH1() {
   // Auto-detect location
   const handleAutoDetect = async () => {
     if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser");
+      // Browser doesn't support geolocation - this is fine, user can enter manually
+      setLiveMessage("Location access is optional. ZIP code works just fine.");
       return;
     }
 
     setIsValidating(true);
     setError("");
+    setLiveMessage("");
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -89,19 +91,25 @@ export default function HomeownerH1() {
             const formatted = formatZipCode(data.postcode);
             setZipCode(formatted);
             setIsValid(validateZipCode(formatted));
+            setAutoDetect(true);
             setLiveMessage(`Location detected: ${data.city || data.locality || "Your area"}`);
           } else {
-            setError("Could not determine ZIP code from your location");
+            // Couldn't get ZIP from location - gracefully fall back
+            setLiveMessage("Location access is optional. ZIP code works just fine.");
           }
         } catch (err) {
-          setError("Failed to detect location. Please enter your ZIP code manually.");
+          // Location detection failed - gracefully fall back
+          setLiveMessage("Location access is optional. ZIP code works just fine.");
         } finally {
           setIsValidating(false);
         }
       },
       (err) => {
-        setError("Location access denied. Please enter your ZIP code manually.");
+        // User denied location or error occurred - gracefully fall back, no error state
+        setLiveMessage("Location access is optional. ZIP code works just fine.");
         setIsValidating(false);
+        // Explicitly clear any error state
+        setError("");
       }
     );
   };
@@ -155,30 +163,39 @@ export default function HomeownerH1() {
   }, []);
 
   return (
-    <main id="main-content" className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <main id="main-content" className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <SecondarySection>
         {/* Progress Indicator */}
-        <ProgressIndicator currentStep={1} totalSteps={5} stepLabels={STEPS} />
+        <div className="mb-8">
+          <ProgressIndicator currentStep={1} totalSteps={5} stepLabels={STEPS} />
+        </div>
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            Step 1: Location
-          </h1>
-          <p className="text-lg text-gray-600">
-            We'll use your location to provide accurate regional pricing
+        <SecondaryHeader
+          title="Step 1: Location"
+          subtitle="HVAC pricing varies significantly by region due to labor rates, local codes, and equipment availability."
+          align="center"
+          className="mb-6"
+        />
+        
+        {/* ACKNOWLEDGE REAL FEARS - Without dramatizing */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
+          <p className="text-sm text-gray-700 leading-relaxed">
+            Many homeowners want to understand pricing before talking to anyone. This helps you know what questions to ask and what to expect, so you don't overpay or feel pressured.
           </p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8 space-y-6">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100/80 p-8 md:p-10 space-y-8">
           <LiveRegion message={liveMessage} />
           
           <div>
-            <label htmlFor="zipcode" className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+            <label htmlFor="zipcode" className="block text-base font-bold text-gray-900 mb-3">
               ZIP Code <span className="text-red-500">*</span>
-              <HelpTooltip content="Your ZIP code helps us calculate accurate regional pricing, labor costs, and local market conditions. We use this to provide the most accurate estimate possible." />
             </label>
+            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+              Your ZIP code helps us generate a realistic regional price range rather than a generic estimate.
+            </p>
             <div className="relative">
               <input
                 type="text"
@@ -192,11 +209,11 @@ export default function HomeownerH1() {
                 aria-required="true"
                 aria-invalid={error ? "true" : isValid ? "false" : undefined}
                 aria-describedby={error ? "zipcode-error" : "zipcode-help"}
-                className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-gray-900 bg-white placeholder:text-gray-400 ${
+                className={`w-full px-5 py-4 pr-12 border-2 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-gray-900 bg-white placeholder:text-gray-400 text-base ${
                   error 
                     ? "border-red-300 bg-red-50" 
                     : isValid && zipCode.length >= 5
-                    ? "border-green-300 bg-green-50"
+                    ? "border-green-400 bg-green-50"
                     : "border-gray-300"
                 }`}
                 onKeyDown={(e) => {
@@ -223,26 +240,33 @@ export default function HomeownerH1() {
                 <ErrorMessage message={error} type="error" />
               </div>
             )}
-            <p id="zipcode-help" className="mt-2 text-sm text-gray-500">
-              Your ZIP code helps us calculate accurate regional pricing and labor costs.
-              {zipCode.length > 0 && zipCode.length < 5 && (
-                <span className="block mt-1 text-xs text-gray-400">
-                  {5 - zipCode.length} more digit{5 - zipCode.length !== 1 ? "s" : ""} needed
-                </span>
-              )}
-            </p>
+            {zipCode.length > 0 && zipCode.length < 5 && (
+              <p className="mt-2 text-xs text-gray-400">
+                {5 - zipCode.length} more digit{5 - zipCode.length !== 1 ? "s" : ""} needed
+              </p>
+            )}
+            {isValid && zipCode.length >= 5 && (
+              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-700 font-medium flex items-center gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  You're doing this the smart way—before talking to anyone.
+                </p>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-start gap-3 p-4 bg-primary-50 rounded-lg border border-primary-100">
+          <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <button
               type="button"
               onClick={handleAutoDetect}
               disabled={isValidating}
-              className="mt-1 flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="mt-1 flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {isValidating ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent"></div>
                   Detecting...
                 </>
               ) : (
@@ -256,40 +280,34 @@ export default function HomeownerH1() {
               )}
             </button>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">
-                Use my current location
+              <p className="text-sm text-gray-700">
+                Use your current location to auto-fill your ZIP code. You can enter it manually if you prefer.
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                We'll use your browser's location to automatically fill in your ZIP code
+                Location access is optional. ZIP code works just fine.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
-        <div className="mt-8 flex justify-between items-center">
+        {/* Navigation - ONE PRIMARY CTA */}
+        <div className="mt-12 flex justify-between items-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-900 font-medium transition-colors cursor-pointer"
+            className="text-sm text-gray-600 hover:text-gray-900 transition-colors underline-offset-4 hover:underline"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
             Back to Home
           </Link>
           <button
             onClick={handleNext}
             disabled={!isValid || zipCode.trim().length < 5}
             type="button"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:transform-none cursor-pointer"
+            className="px-8 py-4 bg-white text-primary-700 font-semibold rounded-xl hover:bg-primary-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg text-lg cursor-pointer"
           >
             Continue
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
           </button>
         </div>
-      </div>
+      </SecondarySection>
     </main>
   );
 }

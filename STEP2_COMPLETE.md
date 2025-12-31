@@ -192,3 +192,4 @@ app/contractor/
 
 All access gates implemented. Contractor access and company setup completion are properly gated. All pricing logic remains stubbed as requested.
 
+

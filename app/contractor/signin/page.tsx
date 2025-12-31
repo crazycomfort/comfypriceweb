@@ -23,7 +23,22 @@ export default function ContractorSignIn() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      // Check if response has content before parsing
+      const text = await response.text();
+      if (!text) {
+        setError("Server error: Empty response. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        setError("Server error: Invalid response. Please try again.");
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         setError(data.error || "Sign in failed. Please check your credentials.");

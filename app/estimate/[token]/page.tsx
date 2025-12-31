@@ -21,7 +21,7 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
   const isDevBypass = process.env.NODE_ENV !== "production" && process.env.DEV_BYPASS_AUTH === "true";
   if (isDevBypass && token === "test-token") {
     return (
-      <main className="min-h-screen bg-gray-50">
+      <main id="main-content" className="min-h-screen bg-gray-50">
         <section className="py-12 md:py-16 bg-gradient-to-b from-white to-gray-50 border-b border-gray-200">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
@@ -67,9 +67,18 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
     notFound();
   }
 
+  // Load custom pricing if it exists (read-only for homeowners)
+  const { getCustomPricing } = await import("@/lib/custom-pricing-store");
+  const customPricingData = getCustomPricing(validation.estimateId);
+  
+  // Use custom pricing if available, otherwise use automated ranges
+  const displayPricing = customPricingData?.customPricing || estimate.tierRanges;
+  const varianceNotes = customPricingData?.pricingVarianceNotes || null;
+
   await logEvent("share_link_viewed", {
     estimateId: validation.estimateId,
     version: validation.version,
+    hasCustomPricing: !!customPricingData,
   });
 
   const formatCurrency = (amount: number) => {
@@ -81,16 +90,14 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
     }).format(amount);
   };
 
-  // Generate option tiers
+  // Generate option tiers using display pricing (custom or automated)
   const generateOptions = () => {
-    const midPoint = (estimate.range.min + estimate.range.max) / 2;
-    
     return [
       {
         id: "good",
         name: "Good",
         description: "Reliable, efficient system that meets your basic needs",
-        price: estimate.range.min,
+        priceRange: displayPricing.good,
         features: [
           "Standard efficiency equipment",
           "Professional installation",
@@ -102,7 +109,7 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
         id: "better",
         name: "Better",
         description: "Enhanced performance with modern features and improved efficiency",
-        price: midPoint,
+        priceRange: displayPricing.better,
         features: [
           "Higher efficiency rating",
           "Advanced comfort features",
@@ -115,7 +122,7 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
         id: "best",
         name: "Best",
         description: "Premium system with top-tier efficiency and smart home integration",
-        price: estimate.range.max,
+        priceRange: displayPricing.best,
         features: [
           "Maximum efficiency rating",
           "Smart thermostat included",
@@ -129,7 +136,7 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
   const options = generateOptions();
 
   return (
-    <main className="min-h-screen bg-gray-50">
+    <main id="main-content" className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <section className="py-12 md:py-16 bg-gradient-to-b from-white to-gray-50 border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -147,14 +154,22 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
             {/* Price Range Display */}
             <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100 mb-8 inline-block">
               <p className="text-sm text-gray-500 uppercase tracking-wide mb-2">
-                Estimated Investment Range
+                Pricing Ranges by Tier
               </p>
-              <div className="text-4xl md:text-5xl font-bold text-primary-700 mb-2">
-                {formatCurrency(estimate.range.min)} - {formatCurrency(estimate.range.max)}
+              <div className="text-3xl md:text-4xl font-bold text-primary-700 mb-2 space-y-1">
+                <div>Good: {formatCurrency(displayPricing.good.min)} - {formatCurrency(displayPricing.good.max)}</div>
+                <div>Better: {formatCurrency(displayPricing.better.min)} - {formatCurrency(displayPricing.better.max)}</div>
+                <div>Best: {formatCurrency(displayPricing.best.min)} - {formatCurrency(displayPricing.best.max)}</div>
               </div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 mt-4">
                 All-inclusive pricing • No hidden fees
               </p>
+              {varianceNotes && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">Pricing Notes:</p>
+                  <p className="text-xs text-gray-600 leading-relaxed">{varianceNotes}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -194,8 +209,8 @@ export default async function EstimateViewer({ params }: EstimateViewerProps) {
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{option.name}</h3>
                   <p className="text-sm text-gray-500 mb-4">{option.description}</p>
-                  <div className="text-3xl font-bold text-gray-900">
-                    {formatCurrency(option.price)}
+                  <div className="text-2xl font-bold text-gray-900">
+                    {formatCurrency(option.priceRange.min)} - {formatCurrency(option.priceRange.max)}
                   </div>
                 </div>
 

@@ -32,12 +32,13 @@ export function validateHomeownerInput(input: Partial<EstimateInput>): Validatio
   if (!input.preferences) {
     errors.push({ field: "preferences", message: "Preferences are required" });
   } else {
-    if (!input.preferences.efficiencyLevel) {
+    if (!input.preferences.efficiencyLevel || input.preferences.efficiencyLevel.trim() === "") {
       errors.push({ field: "efficiencyLevel", message: "Efficiency level is required" });
     }
-    if (!input.preferences.systemType) {
+    if (!input.preferences.systemType || input.preferences.systemType.trim() === "") {
       errors.push({ field: "systemType", message: "System type is required" });
     }
+    // smartFeatures can be false (user said no), but not undefined (user didn't answer)
     if (input.preferences.smartFeatures === undefined) {
       errors.push({ field: "smartFeatures", message: "Please indicate interest in smart features" });
     }
@@ -51,4 +52,5 @@ export function formatValidationErrors(errors: ValidationError[]): string {
   if (errors.length === 1) return errors[0].message;
   return `Please fix the following: ${errors.map(e => e.message).join(", ")}`;
 }
+
 

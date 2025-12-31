@@ -4,7 +4,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// Use /tmp for Vercel serverless (only writable location)
+const DATA_DIR = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "data");
 const SHARE_TOKENS_FILE = path.join(DATA_DIR, "share-tokens.json");
 
 export interface ShareToken {

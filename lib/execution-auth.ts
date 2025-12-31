@@ -5,8 +5,10 @@ import { ContractorRole } from "./session";
 export interface ExecutionContext {
   actorId?: string;
   companyId?: string | null;
+  contractorId?: string | null;
   role?: ContractorRole;
   isHomeowner?: boolean;
+  isContractor?: boolean;
 }
 
 // Check if user can execute action
@@ -56,16 +58,22 @@ export async function getExecutionContext(request?: Request): Promise<ExecutionC
         companyId: session.companyId,
         role: session.role,
         isHomeowner: false,
+        isContractor: true,
+        contractorId: session.contractorId,
       };
     }
   } catch (error) {
     // If session check fails (e.g., in API route context), treat as homeowner
-    console.log("Session check failed, treating as homeowner:", error);
+    // This is expected in API routes where cookies() might not work
+    console.log("Session check failed (expected in API routes), treating as homeowner:", error);
   }
 
   // Default: no session = homeowner
   return {
     isHomeowner: true,
+    isContractor: false,
+    companyId: null,
+    contractorId: null,
   };
 }
 

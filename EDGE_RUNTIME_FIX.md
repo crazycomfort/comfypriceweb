@@ -16,3 +16,4 @@ Simplified middleware to be Edge runtime compatible. Rate limiting and telemetry
 ✅ App should now load without errors
 ✅ All functionality preserved (rate limiting and telemetry work in API routes)
 
+

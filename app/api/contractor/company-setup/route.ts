@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       company: updatedCompany,
+      companyCode: updatedCompany.companyCode, // Include company code in response
     });
   } catch (error) {
     return NextResponse.json(
@@ -60,4 +61,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
 

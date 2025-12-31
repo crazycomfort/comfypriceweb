@@ -9,6 +9,7 @@ export default function ContractorRegister() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"owner_admin" | "office" | "tech">("tech");
+  const [companyCode, setCompanyCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,21 +22,67 @@ export default function ContractorRegister() {
       const response = await fetch("/api/contractor/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, password, role, companyCode: role !== "owner_admin" ? companyCode : undefined }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Registration failed");
+      // Check if response has content before parsing
+      const text = await response.text();
+      if (!text) {
+        setError("Server error: Empty response. Please try again.");
         setLoading(false);
         return;
       }
 
-      // Redirect to company setup
-      router.push("/contractor/company-setup");
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        setError("Server error: Invalid response. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      if (!response.ok) {
+        // Show detailed error message if available
+        let errorMessage = data.error || "Registration failed. Please try again.";
+        
+        // Always show details if available (helps with debugging)
+        if (data.details) {
+          errorMessage += `\n\nDetails: ${data.details}`;
+        }
+        
+        console.error("Registration error:", {
+          status: response.status,
+          error: data.error,
+          details: data.details,
+          fullData: data
+        });
+        
+        setError(errorMessage);
+        setLoading(false);
+        return;
+      }
+
+      // Check if registration was successful
+      if (data.success) {
+        // Only owner_admin goes to settings, others go to dashboard
+        if (role === "owner_admin") {
+          // Store company code in sessionStorage if provided (for display on settings page)
+          if (data.companyCode) {
+            sessionStorage.setItem("companyCode", data.companyCode);
+          }
+          router.push("/contractor/owner/settings");
+        } else {
+          router.push("/contractor/dashboard");
+        }
+      } else {
+        setError("Registration failed. Please try again.");
+        setLoading(false);
+      }
     } catch (err) {
-      setError("An error occurred. Please try again.");
+      console.error("Registration request failed:", err);
+      const errorMessage = err instanceof Error ? err.message : "An error occurred. Please try again.";
+      setError(`Network error: ${errorMessage}\n\nPlease check your connection and try again.`);
       setLoading(false);
     }
   };
@@ -64,11 +111,15 @@ export default function ContractorRegister() {
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 md:p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{error}</span>
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <div className="whitespace-pre-line text-sm">{error}</div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -119,7 +170,10 @@ export default function ContractorRegister() {
               <select
                 id="role"
                 value={role}
-                onChange={(e) => setRole(e.target.value as "owner_admin" | "office" | "tech")}
+                onChange={(e) => {
+                  setRole(e.target.value as "owner_admin" | "office" | "tech");
+                  setError("");
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-gray-900 bg-white"
               >
                 <option value="tech">Tech</option>
@@ -130,6 +184,29 @@ export default function ContractorRegister() {
                 Select your role in the company
               </p>
             </div>
+
+            {role !== "owner_admin" && (
+              <div>
+                <label htmlFor="companyCode" className="block text-sm font-semibold text-gray-900 mb-2">
+                  Company Code *
+                </label>
+                <input
+                  type="text"
+                  id="companyCode"
+                  value={companyCode}
+                  onChange={(e) => {
+                    setCompanyCode(e.target.value.toUpperCase());
+                    setError("");
+                  }}
+                  required
+                  placeholder="Enter company invitation code"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-gray-900 bg-white placeholder:text-gray-400"
+                />
+                <p className="mt-2 text-sm text-gray-500">
+                  Get this code from your company owner/admin. This links you to your company.
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"

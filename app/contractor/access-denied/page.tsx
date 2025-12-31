@@ -22,7 +22,7 @@ export default function ContractorAccessDenied() {
           </p>
           
           <p className="text-base text-gray-500 mb-8">
-            You must sign in with a contractor account to access pricing tools, cost breakdowns, and client estimate generation.
+            You must sign in with a contractor account to access your pricing authority tools and configure your homeowner estimate experience.
           </p>
           
           <div className="bg-primary-50 border border-primary-200 rounded-lg p-6 mb-8 text-left">
